@@ -63,6 +63,8 @@ onCleanup(() => {
     visualViewport.removeEventListener("resize", onVisualViewportChange);
     visualViewport.removeEventListener("scroll", onVisualViewportChange);
     document.documentElement.classList.remove("e-zoomed");
+    disable_ev_lsn = true;
+    cleanupGesRec();
 });
 
 let offsetx = 0;
@@ -109,21 +111,23 @@ window.addEventListener("wheel", e => {
         rerender();
     }
 }, {passive: false});
-window.addEventListener("pointerdown", e => {
+const cleanupGesRec = recognizeGestures((ptr, ges) => {
+    console.log("RECOG", ptr, ges);
     if(disable_ev_lsn) return;
-    e.preventDefault();
-});
-window.addEventListener("pointermove", e => {
-    if(disable_ev_lsn) return;
-    e.preventDefault();
-});
-window.addEventListener("pointerup", e => {
-    if(disable_ev_lsn) return;
-    e.preventDefault();
-});
-window.addEventListener("pointercancel", e => {
-    if(disable_ev_lsn) return;
-    e.preventDefault();
+    if(ptr === "mouse") return;
+
+    if(ges.kind === "draw") {
+        if(ges.points.length < 2) return;
+        const seclast = ges.points[ges.points.length - 2];
+        const last = ges.points[ges.points.length - 1];
+        const dx = seclast[0] - last[0];
+        const dy = seclast[1] - last[1];
+        offsetx -= dx;
+        offsety -= dy;
+        rerender();
+    }else{
+        console.log("got unknown gesture", ptr, ges);
+    }
 });
 
 const ctx = canvas.getContext("2d");
@@ -207,6 +211,7 @@ class ImageView extends Component {
             };
         }
         this.clean("src", () => {
+            // this.img.src = mockURL(this.props.url);
             this.img.src = this.props.url;
         });
         
