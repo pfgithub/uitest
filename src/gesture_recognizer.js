@@ -78,7 +78,8 @@ function recognizeGestures(onEvent) {
         // send a draw event if there is one relevant pointer
         if(relevant.length === 1) {
             return {
-                kind: "draw",
+                kind: "pan",
+                // TODO: only pass first and last point
                 points: relevant[0].map(pt => pt.point),
                 ...opts,
             };

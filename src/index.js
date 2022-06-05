@@ -67,22 +67,16 @@ onCleanup(() => {
     cleanupGesRec();
 });
 
-let offsetx = 0;
-let offsety = 0;
-let scale = 1;
+const a = DOMMatrix
+
+let transform = new DOMMatrixReadOnly();
 
 function screenToWorldPos(spx, spy) {
-    let x = spx;
-    let y = spy;
-    // 1. scale
-    x /= scale;
-    y /= scale;
-    // 2. translate
-    x -= offsetx;
-    y -= offsety;
-
-    return {x, y};
+    const res = transform.inverse().transformPoint({x: spx, y: spy});
+    return {x: res.x, y: res.y};
 }
+
+window.udm = (cb) => {transform = cb(transform)};
 
 window.addEventListener("wheel", e => {
     if(disable_ev_lsn) return;
@@ -98,32 +92,30 @@ window.addEventListener("wheel", e => {
         
         const cpos = screenToWorldPos(fsetx, fsety);
 
-        scale *= zoom;
+        transform = transform.scale(zoom);
 
         const fpos = screenToWorldPos(fsetx, fsety);
 
-        offsetx += fpos.x - cpos.x;
-        offsety += fpos.y - cpos.y;
+        transform = transform.translate(fpos.x - cpos.x, fpos.y - cpos.y);
     }else{
         // pan
-        offsetx -= e.deltaX / scale;
-        offsety -= e.deltaY / scale;
+        transform = new DOMMatrixReadOnly().translate(-e.deltaX, -e.deltaY).multiply(transform);
         rerender();
     }
 }, {passive: false});
 const cleanupGesRec = recognizeGestures((ptr, ges) => {
-    console.log("RECOG", ptr, ges);
     if(disable_ev_lsn) return;
     if(ptr === "mouse") return;
 
-    if(ges.kind === "draw") {
+    if(ges.kind === "pan") {
         if(ges.points.length < 2) return;
+        // note: this is *incorrect*
+        // we should probably change recognizeGestures to have a start/update/end thing instead of this
         const seclast = ges.points[ges.points.length - 2];
         const last = ges.points[ges.points.length - 1];
         const dx = seclast[0] - last[0];
         const dy = seclast[1] - last[1];
-        offsetx -= dx;
-        offsety -= dy;
+        transform = new DOMMatrixReadOnly().translate(-dx, -dy).multiply(transform);
         rerender();
     }else{
         console.log("got unknown gesture", ptr, ges);
@@ -181,9 +173,13 @@ class Component {
 class PanView extends Component {
     render(ctx, x, y, w, h) {
         ctx.save();
-        ctx.scale(scale, scale);
-        ctx.translate(offsetx, offsety);
+        ctx.transform(transform.a, transform.b, transform.c, transform.d, transform.e, transform.f);
         this.props.child.render(ctx, x, y);
+
+        // ctx.fillStyle = "white";
+        // const pos = screenToWorldPos(10, 10);
+        // ctx.fillRect(pos.x, pos.y, 10, 10);
+        
         ctx.restore();
     }
 };
