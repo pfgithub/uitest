@@ -11,6 +11,60 @@ onCleanup(() => {
     canvas.remove();
 });
 
+const err_el = document.createElement("div");
+err_el.style.display = "none";
+err_el.style.backgroundColor = "red";
+err_el.style.color = "white";
+err_el.style.height = "100%";
+err_el.style.pointerEvents = "none";
+const eech = document.createElement("div");
+eech.style.padding = "1rem";
+eech.style.position = "fixed";
+eech.style.top = "0";
+eech.style.left = "0";
+eech.style.right = "0";
+eech.style.bottom = "0";
+eech.style.transformOrigin = "top left";
+eech.style.willChange = "transform";
+eech.style.display = "flex";
+eech.style.alignItems = "center";
+eech.style.justifyContent = "center";
+eech.style.fontSize = "3vw";
+eech.innerHTML = "<div>The page is zoomed. Zoom out to continue.</div>";
+err_el.appendChild(eech);
+document.body.appendChild(err_el);
+
+const stylel = document.createElement("style");
+stylel.textContent = `
+html:not(.e-zoomed), html:not(.e-zoomed) > body {
+    touch-action: none;
+    overflow-y: hidden;
+}
+`;
+document.head.appendChild(stylel);
+
+let disable_ev_lsn = false;
+
+function onVisualViewportChange(e) {
+    const value = visualViewport.scale < 0.999 || visualViewport.scale > 1.001;
+    document.documentElement.classList.toggle("e-zoomed", value);
+    canvas.style.display = value ? "none" : "";
+    err_el.style.display = value ? "" : "none";
+    disable_ev_lsn = value;
+
+    const offset_left = visualViewport.offsetLeft;
+    const offset_top = visualViewport.offsetTop;
+    eech.style.transform = 'translate(' + offset_left + 'px,' + offset_top + 'px) ' + 'scale(' + 1/visualViewport.scale + ')';
+}
+
+visualViewport.addEventListener("resize", onVisualViewportChange);
+visualViewport.addEventListener("scroll", onVisualViewportChange);
+onCleanup(() => {
+    visualViewport.removeEventListener("resize", onVisualViewportChange);
+    visualViewport.removeEventListener("scroll", onVisualViewportChange);
+    document.documentElement.classList.remove("e-zoomed");
+});
+
 let offsetx = 0;
 let offsety = 0;
 let scale = 1;
@@ -29,6 +83,7 @@ function screenToWorldPos(spx, spy) {
 }
 
 window.addEventListener("wheel", e => {
+    if(disable_ev_lsn) return;
     e.preventDefault();
 
     if(e.ctrlKey) {
@@ -55,15 +110,19 @@ window.addEventListener("wheel", e => {
     }
 }, {passive: false});
 window.addEventListener("pointerdown", e => {
+    if(disable_ev_lsn) return;
     e.preventDefault();
 });
 window.addEventListener("pointermove", e => {
+    if(disable_ev_lsn) return;
     e.preventDefault();
 });
 window.addEventListener("pointerup", e => {
+    if(disable_ev_lsn) return;
     e.preventDefault();
 });
 window.addEventListener("pointercancel", e => {
+    if(disable_ev_lsn) return;
     e.preventDefault();
 });
 
