@@ -120,6 +120,10 @@ const cleanupGesRec = recognizeGestures((ptr, ges) => {
     }else{
         console.log("got unknown gesture", ptr, ges);
     }
+    // for touchzoom:
+    // - set new scale based on distance between fingers
+    // - set new rotation based on angle between fingers
+    // - update transform (initial position of one finger - final position)
 });
 
 const ctx = canvas.getContext("2d");
